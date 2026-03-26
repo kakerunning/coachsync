@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev 2>&1)",
+      "Bash(pkill -f \"next dev\" && sleep 2)",
+      "Bash(fuser -k 3001/tcp 2>&1 && sleep 2)",
+      "Bash(lsof -i :3001 2>&1)",
+      "Bash(ss -tlnp | grep 3001 2>&1)"
+    ]
+  }
+}

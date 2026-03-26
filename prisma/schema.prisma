@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  COACH
+  ATHLETE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  coachRelations   CoachAthleteRelation[] @relation("Coach")
+  athleteRelations CoachAthleteRelation[] @relation("Athlete")
+  coachPrograms    TrainingProgram[]      @relation("CoachPrograms")
+  athletePrograms  TrainingProgram[]      @relation("AthletePrograms")
+  coachInvites     InviteLink[]           @relation("CoachInvites")
+  usedInvites      InviteLink[]           @relation("UsedInvites")
+  athleteSessions  Session[]              @relation("AthleteSessions")
+  coachSessions    Session[]              @relation("CoachSessions")
+}
+
+model CoachAthleteRelation {
+  id        String   @id @default(cuid())
+  coachId   String
+  athleteId String
+  createdAt DateTime @default(now())
+
+  coach   User @relation("Coach", fields: [coachId], references: [id], onDelete: Cascade)
+  athlete User @relation("Athlete", fields: [athleteId], references: [id], onDelete: Cascade)
+
+  @@unique([coachId, athleteId])
+}
+
+model TrainingProgram {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  coachId     String
+  athleteId   String?
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  coach    User              @relation("CoachPrograms", fields: [coachId], references: [id], onDelete: Cascade)
+  athlete  User?             @relation("AthletePrograms", fields: [athleteId], references: [id], onDelete: SetNull)
+  sessions TrainingSession[]
+}
+
+model InviteLink {
+  id        String    @id @default(cuid())
+  token     String    @unique @default(cuid())
+  coachId   String
+  expiresAt DateTime
+  usedById  String?
+  createdAt DateTime  @default(now())
+
+  coach   User  @relation("CoachInvites", fields: [coachId], references: [id], onDelete: Cascade)
+  usedBy  User? @relation("UsedInvites", fields: [usedById], references: [id], onDelete: SetNull)
+}
+
+model TrainingSession {
+  id          String   @id @default(cuid())
+  programId   String
+  title       String
+  description String?
+  scheduledAt DateTime
+  durationMin Int?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  program TrainingProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+}
+
+// ── Athlete Session Entry ──────────────────────────────────────────────────
+
+enum SessionTypeValue {
+  SPEED
+  ENDURANCE
+  VOLUME
+  TECHNIQUE
+  HILLS
+  HURDLES
+  GYM
+  RECOVERY
+}
+
+enum IncidentType {
+  NONE
+  CRAMP
+  PAIN
+  EARLY_FATIGUE
+}
+
+model Session {
+  id          String    @id @default(cuid())
+  date        DateTime
+  title       String
+  durationMin Int?
+  athleteId   String
+  coachId     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  athlete     User             @relation("AthleteSessions", fields: [athleteId], references: [id], onDelete: Cascade)
+  coach       User?            @relation("CoachSessions", fields: [coachId], references: [id], onDelete: SetNull)
+  types       SessionType[]
+  warmupItems WarmupItem[]
+  sets        TrainingSet[]
+  drills      Drill[]
+  feedback    SessionFeedback?
+}
+
+model SessionType {
+  id        String           @id @default(cuid())
+  type      SessionTypeValue
+  sessionId String
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model WarmupItem {
+  id        String  @id @default(cuid())
+  order     Int
+  name      String
+  detail    String?
+  sessionId String
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model TrainingSet {
+  id        String  @id @default(cuid())
+  order     Int
+  abandoned Boolean @default(false)
+  note      String?
+  sessionId String
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  laps    Lap[]
+}
+
+model Lap {
+  id          String  @id @default(cuid())
+  order       Int
+  distance    String
+  timeSeconds Float?
+  note        String?
+  setId       String
+
+  set TrainingSet @relation(fields: [setId], references: [id], onDelete: Cascade)
+}
+
+model Drill {
+  id        String @id @default(cuid())
+  order     Int
+  name      String
+  sessionId String
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model SessionFeedback {
+  id        String  @id @default(cuid())
+  fatigue   Int
+  rpe       Int
+  note      String?
+  sessionId String  @unique
+
+  session   Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  incidents Incident[]
+}
+
+model Incident {
+  id         String       @id @default(cuid())
+  type       IncidentType
+  bodyPart   String?
+  severity   Int?
+  detail     String?
+  feedbackId String
+
+  feedback SessionFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+}
