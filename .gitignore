@@ -46,4 +46,13 @@ next-env.d.ts
 CLAUDE.md
 UI.md
 WORK_LOG.md
+API_ROUTES.md
+DEEPLAPI.md
+DEVLOG.md  
+AUTH_CONFIG.md
+DOCKER.md
+FEATURE_LAYER.md
+prisama_tutrial/
 .claude/
+
+.vercel

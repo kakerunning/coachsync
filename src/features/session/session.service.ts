@@ -2,6 +2,7 @@ import * as repo from "./session.repository";
 import { sessionPayloadSchema } from "./session.types";
 import type { SessionPayload, SessionListItem, SessionDetail } from "./session.types";
 
+// create a new session for an athlete (validates with Zod before writing)
 export type CreateSessionResult =
   | { ok: true; id: string }
   | { ok: false; status: 400 | 500; error: string };
@@ -23,6 +24,7 @@ export async function createSession(
   }
 }
 
+// get a session by id (includes ownership checks)
 export type GetSessionResult =
   | { ok: true; session: SessionDetail }
   | { ok: false; status: 403 | 404; error: string };
@@ -44,22 +46,29 @@ export async function getSession(
   return { ok: true, session: session as SessionDetail };
 }
 
+// find all sessions by athlete id (includes pagination)
 export type ListSessionsResult =
-  | { ok: true; sessions: SessionListItem[] }
+  | { ok: true; sessions: SessionListItem[]; total: number }
   | { ok: false; status: 500; error: string };
 
 export async function listSessions(
   athleteId: string,
-  week?: string
+  week?: string,
+  page = 1,
+  limit = 20
 ): Promise<ListSessionsResult> {
   try {
-    const sessions = await repo.listSessionsByAthlete(athleteId, week);
-    return { ok: true, sessions: sessions as SessionListItem[] };
+    // When filtering by week, return all (week has ~7 entries max)
+    const skip = week ? undefined : (page - 1) * limit;
+    const take = week ? undefined : limit;
+    const { items, total } = await repo.listSessionsByAthlete(athleteId, week, skip, take);
+    return { ok: true, sessions: items as SessionListItem[], total };
   } catch {
     return { ok: false, status: 500, error: "Failed to list sessions" };
   }
 }
 
+// update the feedback note for a session (includes ownership checks)
 export type UpdateFeedbackResult =
   | { ok: true }
   | { ok: false; status: 400 | 403 | 404 | 500; error: string };
@@ -82,6 +91,7 @@ export async function updateFeedbackNote(
   }
 }
 
+// find the best lap time for a given distance (pass-through)
 export async function getChartData(
   athleteId: string,
   distance: string

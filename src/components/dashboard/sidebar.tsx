@@ -3,20 +3,24 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Dumbbell, Users, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Users, ClipboardList, UserCircle, CalendarDays, CalendarRange, Trophy, BarChart2 } from "lucide-react";
 
 const navItems = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/sessions", label: "Sessions", icon: ClipboardList },
-  { href: "/dashboard/programs", label: "Programs", icon: Dumbbell },
-  { href: "/dashboard/athletes", label: "Athletes", icon: Users },
+  { href: "/dashboard", label: "Overview", icon: LayoutDashboard, coachOnly: false },
+  { href: "/dashboard/sessions", label: "Sessions", icon: ClipboardList, coachOnly: false },
+  { href: "/dashboard/athletes", label: "Athletes", icon: Users, coachOnly: true },
+  { href: "/dashboard/events", label: "Events", icon: CalendarDays, coachOnly: false },
+  { href: "/dashboard/calendar", label: "Calendar", icon: CalendarRange, coachOnly: false },
+  { href: "/dashboard/records", label: "Records", icon: Trophy, coachOnly: false },
+  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart2, coachOnly: false },
+  { href: "/dashboard/profile", label: "Profile", icon: UserCircle, coachOnly: false },
 ] as const;
 
 export function Sidebar({ role }: { role: string }) {
   const pathname = usePathname();
 
   const visibleItems =
-    role === "COACH" ? navItems : navItems.filter((item) => item.href !== "/dashboard/athletes");
+    role === "COACH" ? navItems : navItems.filter((item) => !item.coachOnly);
 
   return (
     <aside className="flex h-full w-56 flex-col border-r bg-white px-3 py-6">

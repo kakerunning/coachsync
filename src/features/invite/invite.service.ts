@@ -2,12 +2,13 @@ import * as repo from "./invite.repository";
 import * as athleteRepo from "@/features/athlete/athlete.repository";
 import type { InviteInfo } from "./invite.types";
 
-const TTL_HOURS = 24;
+const TTL_HOURS = 24; 
 
 export type CreateInviteResult =
   | { ok: true; token: string; expiresAt: Date }
   | { ok: false; status: 500; error: string };
 
+// create a new invite (validates with Zod before writing)
 export async function createInvite(coachId: string): Promise<CreateInviteResult> {
   const expiresAt = new Date(Date.now() + TTL_HOURS * 60 * 60 * 1000);
   try {

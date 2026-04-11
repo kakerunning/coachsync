@@ -38,7 +38,7 @@ export function WeekStrip({ activeSessionId, activeDate }: { activeSessionId: st
   const activeDateStr = activeDate.slice(0, 10);
 
   useEffect(() => {
-    fetchLoggedSessions(week).then((data) => setSessions(data)).catch(() => {});
+    fetchLoggedSessions(week).then((data) => setSessions(Array.isArray(data) ? data : data.items)).catch(() => {});
   }, [week]);
 
   const days = getWeekDays(week);

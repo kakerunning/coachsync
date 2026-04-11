@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import type { SessionPayload } from "./session.types";
 
+// create a new session for an athlete (prisma create)
 export async function createSession(athleteId: string, payload: SessionPayload) {
   return db.session.create({
     data: {
@@ -54,6 +55,7 @@ export async function createSession(athleteId: string, payload: SessionPayload) 
   });
 }
 
+// find a session by id (prisma findUnique)
 export async function getSessionById(id: string) {
   return db.session.findUnique({
     where: { id },
@@ -72,10 +74,13 @@ export async function getSessionById(id: string) {
   });
 }
 
+// find all sessions by athlete id (prisma findMany)
 export async function listSessionsByAthlete(
   athleteId: string,
-  week?: string
-) {
+  week?: string,
+  skip?: number,
+  take?: number
+): Promise<{ items: unknown[]; total: number }> {
   const where: { athleteId: string; date?: { gte: Date; lt: Date } } = { athleteId };
 
   if (week) {
@@ -83,16 +88,26 @@ export async function listSessionsByAthlete(
     where.date = { gte: start, lt: end };
   }
 
-  return db.session.findMany({
+  const query = {
     where,
-    orderBy: { date: "desc" },
+    orderBy: { date: "desc" } as const,
     include: {
       types: true,
       feedback: { select: { fatigue: true, rpe: true } },
     },
-  });
+    ...(skip !== undefined && { skip }),
+    ...(take !== undefined && { take }),
+  };
+
+  const [items, total] = await Promise.all([
+    db.session.findMany(query),
+    db.session.count({ where }),
+  ]);
+
+  return { items, total };
 }
 
+// find the best lap time for a given distance (prisma findMany)
 export async function getChartData(athleteId: string, distance: string) {
   const sessions = await db.session.findMany({
     where: { athleteId },
@@ -126,6 +141,7 @@ export async function getChartData(athleteId: string, distance: string) {
     .filter(Boolean) as { date: Date; minTime: number }[];
 }
 
+// update the feedback note for a session (prisma update)
 export async function updateFeedback(
   sessionId: string,
   note: string

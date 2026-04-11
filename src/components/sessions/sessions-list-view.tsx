@@ -1,10 +1,13 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { fetchLoggedSessions } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Paginator } from "@/components/ui/paginator";
 import type { SessionListItem } from "@/features/session/session.types";
+import type { Paginated } from "@/lib/api";
 
 const TEAL = "#1D9E75";
 const BORDER = "0.5px solid #e5e5e5";
@@ -20,10 +23,21 @@ function formatDate(d: Date | string) {
 }
 
 export function SessionsListView() {
-  const { data: sessions = [], isLoading, error } = useQuery<SessionListItem[]>({
-    queryKey: ["sessions"],
-    queryFn: () => fetchLoggedSessions(),
+  const [page, setPage] = useState(1);
+  const [now, setNow] = useState<Date | null>(null);
+
+  useEffect(() => { setNow(new Date()); }, []);
+
+  const { data, isLoading, error } = useQuery<Paginated<SessionListItem>>({
+    queryKey: ["sessions", page],
+    queryFn: () => fetchLoggedSessions(undefined, page) as Promise<Paginated<SessionListItem>>,
   });
+
+  const sessions = data?.items ?? [];
+  const meta = data?.meta;
+
+  const upcoming = now ? sessions.filter((s) => new Date(s.date) >= now) : sessions;
+  const past = now ? sessions.filter((s) => new Date(s.date) < now) : [];
 
   if (isLoading) {
     return (
@@ -48,44 +62,69 @@ export function SessionsListView() {
     );
   }
 
-  return (
-    <div className="space-y-2">
-      {sessions.map((s) => (
-        <Link key={s.id} href={`/dashboard/sessions/${s.id}`} className="block">
-          <div
-            style={{ border: BORDER, borderRadius: 12, padding: "12px 16px", backgroundColor: "white" }}
-            className="hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0">
+  function SessionCard({ s, dimmed = false }: { s: SessionListItem; dimmed?: boolean }) {
+    return (
+      <Link key={s.id} href={`/dashboard/sessions/${s.id}`} className="block">
+        <div
+          style={{ border: BORDER, borderRadius: 12, padding: "12px 16px", backgroundColor: dimmed ? "#FAFAFA" : "white", opacity: dimmed ? 0.75 : 1 }}
+          className="hover:bg-gray-50 transition-colors"
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
                 <p className="text-sm font-medium text-gray-900 truncate">{s.title}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{formatDate(s.date)}</p>
-                {s.types.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {s.types.map((t, i) => (
-                      <span key={i} style={{ backgroundColor: "#E8F7F2", color: TEAL, fontSize: 11, padding: "1px 7px", borderRadius: 10, fontWeight: 500 }}>
-                        {t.type.charAt(0) + t.type.slice(1).toLowerCase()}
-                      </span>
-                    ))}
-                  </div>
+                {dimmed && (
+                  <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 8, backgroundColor: "#F3F4F6", color: "#6B7280", fontWeight: 500 }}>
+                    Past
+                  </span>
                 )}
               </div>
-              {s.feedback && (
-                <div className="flex gap-4 text-xs shrink-0 ml-4">
-                  <div className="text-center">
-                    <p className="text-gray-400">Fatigue</p>
-                    <p className="font-semibold" style={{ color: fatigueColor(s.feedback.fatigue) }}>{s.feedback.fatigue}/5</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-gray-400">RPE</p>
-                    <p className="font-semibold" style={{ color: fatigueColor(Math.ceil(s.feedback.rpe / 2)) }}>{s.feedback.rpe}/10</p>
-                  </div>
+              <p className="text-xs text-gray-400 mt-0.5">{formatDate(s.date)}</p>
+              {s.types.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {s.types.map((t, i) => (
+                    <span key={i} style={{ backgroundColor: "#E8F7F2", color: TEAL, fontSize: 11, padding: "1px 7px", borderRadius: 10, fontWeight: 500 }}>
+                      {t.type.charAt(0) + t.type.slice(1).toLowerCase()}
+                    </span>
+                  ))}
                 </div>
               )}
             </div>
+            {s.feedback && (
+              <div className="flex gap-4 text-xs shrink-0 ml-4">
+                <div className="text-center">
+                  <p className="text-gray-400">Fatigue</p>
+                  <p className="font-semibold" style={{ color: fatigueColor(s.feedback.fatigue) }}>{s.feedback.fatigue}/5</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-gray-400">RPE</p>
+                  <p className="font-semibold" style={{ color: fatigueColor(Math.ceil(s.feedback.rpe / 2)) }}>{s.feedback.rpe}/10</p>
+                </div>
+              </div>
+            )}
           </div>
-        </Link>
-      ))}
+        </div>
+      </Link>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {upcoming.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Upcoming</p>
+          {upcoming.map((s) => <SessionCard key={s.id} s={s} />)}
+        </div>
+      )}
+
+      {past.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Past</p>
+          {past.map((s) => <SessionCard key={s.id} s={s} dimmed />)}
+        </div>
+      )}
+
+      {meta && <Paginator meta={meta} onPageChange={setPage} />}
     </div>
   );
 }

@@ -16,7 +16,10 @@ export async function GET(
   }
 
   const week = req.nextUrl.searchParams.get("week") ?? undefined;
-  const result = await service.listSessions(user.id, week);
+  const page = Math.max(1, parseInt(req.nextUrl.searchParams.get("page") ?? "1", 10) || 1);
+  const limit = Math.min(100, parseInt(req.nextUrl.searchParams.get("limit") ?? "20", 10) || 20);
+
+  const result = await service.listSessions(user.id, week, page, limit);
 
   if (!result.ok) {
     return NextResponse.json(
@@ -25,7 +28,12 @@ export async function GET(
     );
   }
 
-  return NextResponse.json({ data: result.sessions, error: null, meta: null });
+  const totalPages = Math.ceil(result.total / limit);
+  return NextResponse.json({
+    data: result.sessions,
+    error: null,
+    meta: week ? null : { page, limit, total: result.total, totalPages },
+  });
 }
 
 export async function POST(

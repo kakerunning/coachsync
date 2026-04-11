@@ -7,7 +7,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const session = await auth();
 
   if (!session?.user) {
-    redirect("/login");
+    redirect("/login");  // no valid cookie -> back to login
   }
 
   const user = {

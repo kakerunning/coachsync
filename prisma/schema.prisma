@@ -1,3 +1,4 @@
+//configuration
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -7,20 +8,24 @@ datasource db {
   provider = "postgresql"
 }
 
+//A user in CoachSync is either a COACH or an ATHLETE
 enum Role {
   COACH
   ATHLETE
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  name         String
-  role         Role
+  id           String   @id @default(cuid()) /// uniqueID, auto-generated
+  email        String   @unique              /// Must be unique across all users
+  passwordHash String                        /// Stored password (harshed, never plain text)
+  name         String                        
+  role         Role                          /// Either COACH or ATHLETE
+  language     String   @default("en")       
+  imageUrl     String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-
+  
+  // Relations 
   coachRelations   CoachAthleteRelation[] @relation("Coach")
   athleteRelations CoachAthleteRelation[] @relation("Athlete")
   coachPrograms    TrainingProgram[]      @relation("CoachPrograms")
@@ -29,26 +34,34 @@ model User {
   usedInvites      InviteLink[]           @relation("UsedInvites")
   athleteSessions  Session[]              @relation("AthleteSessions")
   coachSessions    Session[]              @relation("CoachSessions")
+  coachEvents      Event[]                @relation("CoachEvents")
+  athleteEvents    Event[]                @relation("AthleteEvents")
+  athleteRecords   PersonalRecord[]       @relation("AthleteRecords")
+  loggedRecords    PersonalRecord[]       @relation("LoggedRecords")
+  coachComments    CoachComment[]         @relation("CoachComments")
+  pushSubscriptions PushSubscription[]
 }
 
+// many to many relationship (one coach can have many athletes, and one athlete can have many coaches)
 model CoachAthleteRelation {
   id        String   @id @default(cuid())
-  coachId   String
-  athleteId String
+  coachId   String                          /// Foreigh key -> points to a User who is a COACH
+  athleteId String                          /// Foreigh key -> points to a User who is an ATHLETE
   createdAt DateTime @default(now())
 
+  // if the coach or athlete is deleted, this relation row is also automatically deleted
   coach   User @relation("Coach", fields: [coachId], references: [id], onDelete: Cascade)
   athlete User @relation("Athlete", fields: [athleteId], references: [id], onDelete: Cascade)
 
-  @@unique([coachId, athleteId])
+  @@unique([coachId, athleteId])            /// A coach-athlete pair can only exist once (no duplicate relationships)
 }
 
 model TrainingProgram {
   id          String    @id @default(cuid())
   title       String
-  description String?
-  coachId     String
-  athleteId   String?
+  description String?                         /// this field is optional (nullable)
+  coachId     String                          /// who created this program
+  athleteId   String?                         /// which athlete assigned to this program (optional)
   startDate   DateTime?
   endDate     DateTime?
   createdAt   DateTime  @default(now())
@@ -56,7 +69,7 @@ model TrainingProgram {
 
   coach    User              @relation("CoachPrograms", fields: [coachId], references: [id], onDelete: Cascade)
   athlete  User?             @relation("AthletePrograms", fields: [athleteId], references: [id], onDelete: SetNull)
-  sessions TrainingSession[]
+  sessions TrainingSession[]                  
 }
 
 model InviteLink {
@@ -71,22 +84,111 @@ model InviteLink {
   usedBy  User? @relation("UsedInvites", fields: [usedById], references: [id], onDelete: SetNull)
 }
 
+
+// one-to-many relationship(one TrainingProgram has many TrainingSessions)
+// the relationshipt would be gone if it is too complicated to my actual coach
 model TrainingSession {
   id          String   @id @default(cuid())
-  programId   String
+  programId   String                         /// which program this session belongs
   title       String
-  description String?
-  scheduledAt DateTime
-  durationMin Int?
-  notes       String?
+  description String?                        /// this field is optional (nullable)
+  scheduledAt DateTime                       
+  durationMin Int?                           /// this field is optional (nullable)
+  notes       String?                        /// this field is optional (nullable)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   program TrainingProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
 }
 
-// ── Athlete Session Entry ──────────────────────────────────────────────────
+// ── Push Subscriptions ────────────────────────────────────────────────────────
 
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ── Coach Comments ────────────────────────────────────────────────────────────
+
+model CoachComment {
+  id        String   @id @default(cuid())
+  sessionId String
+  coachId   String
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  coach   User    @relation("CoachComments", fields: [coachId], references: [id], onDelete: Cascade)
+}
+
+// ── Personal Records ──────────────────────────────────────────────────────────
+
+enum Surface {
+  OUTDOOR
+  INDOOR
+}
+
+model PersonalRecord {
+  id          String   @id @default(cuid())
+  athleteId   String
+  discipline  String
+  performance Float
+  unit        String
+  wind        Float?                         /// this field is optional (nullable), it matters for events wind-assistabled (short sprints, or long jump)
+  date        DateTime
+  competition String?                        /// this field is optional (nullable)
+  location    String?                        /// this field is optional (nullable)
+  surface     Surface  @default(OUTDOOR)
+  loggedById  String
+  createdAt   DateTime @default(now())
+
+  athlete  User @relation("AthleteRecords", fields: [athleteId], references: [id], onDelete: Cascade)
+  loggedBy User @relation("LoggedRecords", fields: [loggedById], references: [id], onDelete: Cascade)
+}
+
+// ── Events ────────────────────────────────────────────────────────────────────
+
+enum EventType {
+  MATCH
+  CAMP
+  TEST
+  OTHER
+}
+
+/// ***consider to change the type, allow users to enter any test***
+enum TestType {
+  VO2MAX
+  LACTIC_TOLERANCE
+  TIME_TRIAL
+  FIELD_TEST
+}
+
+model Event {
+  id        String    @id @default(cuid())
+  title     String
+  type      EventType
+  testType  TestType?
+  date      DateTime
+  location  String?                          /// this field is optional (nullable)
+  notes     String?                          /// this field is optional (nullable)
+  coachId   String
+  athleteId String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  coach   User @relation("CoachEvents", fields: [coachId], references: [id], onDelete: Cascade)
+  athlete User @relation("AthleteEvents", fields: [athleteId], references: [id], onDelete: Cascade)
+}
+
+// ── Athlete Session Entry ──────────────────────────────────────────────────
+/// ***consider to change the type, allow users to enter any type of training***
 enum SessionTypeValue {
   SPEED
   ENDURANCE
@@ -111,7 +213,7 @@ model Session {
   title       String
   durationMin Int?
   athleteId   String
-  coachId     String?
+  coachId     String?                       /// this field is optional (nullable)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -122,6 +224,7 @@ model Session {
   sets        TrainingSet[]
   drills      Drill[]
   feedback    SessionFeedback?
+  comments    CoachComment[]
 }
 
 model SessionType {
@@ -136,7 +239,7 @@ model WarmupItem {
   id        String  @id @default(cuid())
   order     Int
   name      String
-  detail    String?
+  detail    String?                       /// this field is optional (nullable)
   sessionId String
 
   session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -146,7 +249,7 @@ model TrainingSet {
   id        String  @id @default(cuid())
   order     Int
   abandoned Boolean @default(false)
-  note      String?
+  note      String?                      /// this field is optional (nullable)
   sessionId String
 
   session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -158,7 +261,7 @@ model Lap {
   order       Int
   distance    String
   timeSeconds Float?
-  note        String?
+  note        String?                     /// this field is optional (nullable)
   setId       String
 
   set TrainingSet @relation(fields: [setId], references: [id], onDelete: Cascade)
@@ -177,7 +280,7 @@ model SessionFeedback {
   id        String  @id @default(cuid())
   fatigue   Int
   rpe       Int
-  note      String?
+  note      String?                       /// this field is optional (nullable)
   sessionId String  @unique
 
   session   Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -187,9 +290,9 @@ model SessionFeedback {
 model Incident {
   id         String       @id @default(cuid())
   type       IncidentType
-  bodyPart   String?
-  severity   Int?
-  detail     String?
+  bodyPart   String?                       /// this field is optional (nullable)
+  severity   Int?                          /// this field is optional (nullable)
+  detail     String?                       /// this field is optional (nullable)                
   feedbackId String
 
   feedback SessionFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)

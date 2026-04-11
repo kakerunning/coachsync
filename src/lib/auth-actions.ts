@@ -28,13 +28,15 @@ export async function signUpAction(
     return { error: "Password must be at least 8 characters." };
   }
 
+  // check if a user with this email already exists
   const existing = await db.user.findUnique({ where: { email } });
   if (existing) {
     return { error: "Email already in use." };
   }
-
+  // hash the password (never store plain text passward!)
   const passwordHash = await bcrypt.hash(password, 12);
 
+  // creat the new user in the database 
   await db.user.create({
     data: { name, email, passwordHash, role },
   });

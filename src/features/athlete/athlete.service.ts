@@ -4,7 +4,6 @@ import type { AthleteRelation } from "./athlete.types";
 export async function listAthletes(coachId: string): Promise<AthleteRelation[]> {
   return repo.findAthletesByCoachId(coachId);
 }
-
 export type AddAthleteResult =
   | { ok: true; relation: AthleteRelation }
   | { ok: false; status: 400 | 404 | 409; error: string };

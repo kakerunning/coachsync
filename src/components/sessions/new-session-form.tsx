@@ -55,20 +55,13 @@ type FormState = {
   earlyFatigue: boolean;
 };
 
-const todayStr = () => new Date().toISOString().slice(0, 10);
-const nowTimeStr = () => new Date().toTimeString().slice(0, 5);
-
 const DRAFT_KEY = "coachsync_session_draft";
 
-function initForm(): FormState {
-  if (typeof window !== "undefined") {
-    try {
-      const raw = localStorage.getItem(DRAFT_KEY);
-      if (raw) return JSON.parse(raw) as FormState;
-    } catch { /* ignore */ }
-  }
+// Empty initial state — date/time and localStorage draft are filled in useEffect
+// after mount so the server render and client hydration produce identical HTML.
+function emptyForm(): FormState {
   return {
-    date: todayStr(), startTime: nowTimeStr(), durationMin: "", title: "",
+    date: "", startTime: "", durationMin: "", title: "",
     types: [], warmupItems: [], sets: [], drills: [],
     fatigue: 3, rpe: 5, feedbackNote: "",
     cramp: false, crampDetail: "", pain: false,
@@ -128,12 +121,28 @@ function rpeColor(v: number) {
 // ── Main form ─────────────────────────────────────────────────────────────────
 export function NewSessionForm() {
   const router = useRouter();
-  const [form, setForm] = useState<FormState>(initForm);
+  const [form, setForm] = useState<FormState>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Save draft to localStorage on change
+  // Restore localStorage draft or set today's date — runs only on the client
+  // after hydration so server and client initial renders are identical.
   useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) { setForm(JSON.parse(raw) as FormState); return; }
+    } catch { /* ignore */ }
+    const now = new Date();
+    setForm((f) => ({
+      ...f,
+      date: now.toISOString().slice(0, 10),
+      startTime: now.toTimeString().slice(0, 5),
+    }));
+  }, []);
+
+  // Persist draft to localStorage whenever the form changes
+  useEffect(() => {
+    if (!form.date) return; // skip the empty initial state
     try { localStorage.setItem(DRAFT_KEY, JSON.stringify(form)); } catch { /* ignore */ }
   }, [form]);
 

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { fetchLoggedSession, updateFeedbackNote, fetchChartData } from "@/lib/api";
 import { WeekStrip } from "./week-strip";
+import { CoachComments } from "./coach-comments";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import type { SessionDetail } from "@/features/session/session.types";
@@ -88,7 +89,15 @@ function PerfChart({ distance, athleteId }: { distance: string; athleteId: strin
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
-export function SessionDetailView({ sessionId }: { sessionId: string }) {
+export function SessionDetailView({
+  sessionId,
+  isCoach = false,
+  currentUserId = "",
+}: {
+  sessionId: string;
+  isCoach?: boolean;
+  currentUserId?: string;
+}) {
   const { data: session, isLoading, error } = useQuery<SessionDetail>({
     queryKey: ["session", sessionId],
     queryFn: () => fetchLoggedSession(sessionId),
@@ -273,6 +282,9 @@ export function SessionDetailView({ sessionId }: { sessionId: string }) {
           <p className="text-sm text-gray-400">No feedback recorded.</p>
         )}
       </SectionCard>
+
+      {/* Coach comments */}
+      <CoachComments sessionId={sessionId} isCoach={isCoach} currentUserId={currentUserId} />
 
       {/* Notes / feedback to coach */}
       <SectionCard dot={DOT_GRAY} title="Notes to coach">

@@ -1,13 +1,25 @@
-import type { TrainingProgram, CreateTrainingProgramInput, UpdateTrainingProgramInput } from "@/features/training-program/training-program.types";
-import type { TrainingSession, CreateTrainingSessionInput } from "@/features/training-session/training-session.types";
 import type { AthleteRelation } from "@/features/athlete/athlete.types";
 import type { SessionPayload, SessionListItem, SessionDetail } from "@/features/session/session.types";
+import type { UserProfile, UpdateProfileInput } from "@/features/profile/profile.types";
+import type { CoachEvent, CreateEventInput } from "@/features/event/event.types";
+import type { CalendarItem } from "@/features/calendar/calendar.types";
+import type { PersonalRecord, CreateRecordInput } from "@/features/record/record.types";
+import type { CoachComment } from "@/features/coach-comment/coach-comment.types";
 
 type ApiResponse<T> = {
   data: T | null;
   error: string | null;
   meta: Record<string, unknown> | null;
 };
+
+export type PaginationMeta = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+};
+
+export type Paginated<T> = { items: T[]; meta: PaginationMeta };
 
 async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, credentials: "include" });
@@ -20,54 +32,18 @@ async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
   return json.data as T;
 }
 
-// ── Training Programs ─────────────────────────────────────────────────────────
+async function apiFetchPaginated<T>(url: string): Promise<Paginated<T>> {
+  const res = await fetch(url, { credentials: "include" });
+  const json = (await res.json()) as ApiResponse<T[]>;
 
-export function fetchPrograms(): Promise<TrainingProgram[]> {
-  return apiFetch<TrainingProgram[]>("/api/training-programs");
-}
+  if (!res.ok || json.error) {
+    throw new Error(json.error ?? `Request failed: ${res.status}`);
+  }
 
-export function fetchProgram(id: string): Promise<TrainingProgram> {
-  return apiFetch<TrainingProgram>(`/api/training-programs/${id}`);
-}
-
-export function createProgram(input: CreateTrainingProgramInput): Promise<TrainingProgram> {
-  return apiFetch<TrainingProgram>("/api/training-programs", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-}
-
-export function updateProgram(id: string, input: UpdateTrainingProgramInput): Promise<TrainingProgram> {
-  return apiFetch<TrainingProgram>(`/api/training-programs/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-}
-
-export function deleteProgram(id: string): Promise<void> {
-  return apiFetch<void>(`/api/training-programs/${id}`, { method: "DELETE" });
-}
-
-// ── Training Sessions ─────────────────────────────────────────────────────────
-
-export function fetchSessions(programId: string): Promise<TrainingSession[]> {
-  return apiFetch<TrainingSession[]>(`/api/training-programs/${programId}/sessions`);
-}
-
-export function createSession(programId: string, input: CreateTrainingSessionInput): Promise<TrainingSession> {
-  return apiFetch<TrainingSession>(`/api/training-programs/${programId}/sessions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-}
-
-export function deleteSession(programId: string, sessionId: string): Promise<void> {
-  return apiFetch<void>(`/api/training-programs/${programId}/sessions/${sessionId}`, {
-    method: "DELETE",
-  });
+  return {
+    items: json.data as T[],
+    meta: json.meta as PaginationMeta,
+  };
 }
 
 // ── Athletes ──────────────────────────────────────────────────────────────────
@@ -90,9 +66,12 @@ export function removeAthlete(athleteId: string): Promise<void> {
 
 // ── Athlete Sessions (Session log) ────────────────────────────────────────────
 
-export function fetchLoggedSessions(week?: string): Promise<SessionListItem[]> {
-  const url = week ? `/api/sessions?week=${encodeURIComponent(week)}` : "/api/sessions";
-  return apiFetch<SessionListItem[]>(url);
+export function fetchLoggedSessions(week?: string, page = 1): Promise<Paginated<SessionListItem> | SessionListItem[]> {
+  if (week) {
+    // Week-filtered: returns plain array (no pagination needed)
+    return apiFetch<SessionListItem[]>(`/api/sessions?week=${encodeURIComponent(week)}`);
+  }
+  return apiFetchPaginated<SessionListItem>(`/api/sessions?page=${page}`);
 }
 
 export function fetchLoggedSession(id: string): Promise<SessionDetail> {
@@ -121,6 +100,96 @@ export function fetchChartData(
   return apiFetch<{ date: string; minTime: number }[]>(
     `/api/sessions/chart?distance=${encodeURIComponent(distance)}`
   );
+}
+
+// ── Translation ───────────────────────────────────────────────────────────────
+
+export function translate(
+  text: string,
+  targetLang: string
+): Promise<{ translatedText: string; detectedSourceLang: string }> {
+  return apiFetch("/api/translate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, targetLang }),
+  });
+}
+
+// ── Coach Comments ────────────────────────────────────────────────────────────
+
+export function fetchComments(sessionId: string): Promise<CoachComment[]> {
+  return apiFetch<CoachComment[]>(`/api/sessions/${sessionId}/comments`);
+}
+
+export function postComment(sessionId: string, text: string): Promise<CoachComment> {
+  return apiFetch<CoachComment>(`/api/sessions/${sessionId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+}
+
+export function deleteComment(sessionId: string, commentId: string): Promise<void> {
+  return apiFetch<void>(`/api/sessions/${sessionId}/comments/${commentId}`, { method: "DELETE" });
+}
+
+// ── Personal Records ──────────────────────────────────────────────────────────
+
+export function fetchRecords(athleteId?: string): Promise<PersonalRecord[]> {
+  const url = athleteId ? `/api/records?athleteId=${athleteId}` : "/api/records";
+  return apiFetch<PersonalRecord[]>(url);
+}
+
+export function createRecord(input: CreateRecordInput): Promise<PersonalRecord> {
+  return apiFetch<PersonalRecord>("/api/records", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteRecord(id: string): Promise<void> {
+  return apiFetch<void>(`/api/records/${id}`, { method: "DELETE" });
+}
+
+// ── Calendar ──────────────────────────────────────────────────────────────────
+
+export function fetchCalendarItems(from: string, to: string): Promise<CalendarItem[]> {
+  return apiFetch<CalendarItem[]>(
+    `/api/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
+  );
+}
+
+// ── Profile ───────────────────────────────────────────────────────────────────
+
+export function fetchProfile(): Promise<UserProfile> {
+  return apiFetch<UserProfile>("/api/profile");
+}
+
+export function updateProfile(input: UpdateProfileInput): Promise<UserProfile> {
+  return apiFetch<UserProfile>("/api/profile", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+// ── Events ────────────────────────────────────────────────────────────────────
+
+export function fetchEvents(page = 1): Promise<Paginated<CoachEvent>> {
+  return apiFetchPaginated<CoachEvent>(`/api/events?page=${page}`);
+}
+
+export function createEvent(input: CreateEventInput): Promise<CoachEvent> {
+  return apiFetch<CoachEvent>("/api/events", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteEvent(id: string): Promise<void> {
+  return apiFetch<void>(`/api/events/${id}`, { method: "DELETE" });
 }
 
 // ── Invites ───────────────────────────────────────────────────────────────────
