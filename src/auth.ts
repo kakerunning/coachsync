@@ -14,18 +14,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const user = await db.user.findUnique({
-          where: { email: credentials.email as string },
-        });
+        const email = (credentials.email as string).toLowerCase().trim();
 
-        if (!user) return null;
+        let user;
+        try {
+          user = await db.user.findUnique({ where: { email } });
+        } catch (err) {
+          console.error("[authorize] DB error:", err);
+          throw err;
+        }
+
+        if (!user) {
+          console.error("[authorize] No user found for email:", email);
+          return null;
+        }
 
         const passwordMatch = await bcrypt.compare(
           credentials.password as string,
           user.passwordHash
         );
 
-        if (!passwordMatch) return null;
+        if (!passwordMatch) {
+          console.error("[authorize] Password mismatch for:", email);
+          return null;
+        }
 
         return {
           id: user.id,

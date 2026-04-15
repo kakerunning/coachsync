@@ -68,7 +68,7 @@ async function main() {
   const [coach, marcus, leon, hina, daiki] = await Promise.all([
     prisma.user.upsert({
       where: { id: ID.coach },
-      update: {},
+      update: { passwordHash: hash },
       create: {
         id: ID.coach,
         email: "coach@coachsync.demo",
@@ -80,7 +80,7 @@ async function main() {
     }),
     prisma.user.upsert({
       where: { id: ID.marcus },
-      update: {},
+      update: { passwordHash: hash },
       create: {
         id: ID.marcus,
         email: "marcus@coachsync.demo",
@@ -92,7 +92,7 @@ async function main() {
     }),
     prisma.user.upsert({
       where: { id: ID.leon },
-      update: {},
+      update: { passwordHash: hash },
       create: {
         id: ID.leon,
         email: "leon@coachsync.demo",
@@ -104,7 +104,7 @@ async function main() {
     }),
     prisma.user.upsert({
       where: { id: ID.hina },
-      update: {},
+      update: { passwordHash: hash },
       create: {
         id: ID.hina,
         email: "hina@coachsync.demo",
@@ -116,7 +116,7 @@ async function main() {
     }),
     prisma.user.upsert({
       where: { id: ID.daiki },
-      update: {},
+      update: { passwordHash: hash },
       create: {
         id: ID.daiki,
         email: "daiki@coachsync.demo",

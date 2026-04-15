@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { signIn } from "@/auth";
 import { Role } from "@/generated/prisma/enums";
-import { AuthError } from "next-auth";
+import { AuthError, CredentialsSignin } from "next-auth";
 
 export type ActionState = {
   error?: string;
@@ -56,9 +56,16 @@ export async function signInAction(
   try {
     await signIn("credentials", { email, password, redirectTo: "/dashboard" });
   } catch (err) {
-    if (err instanceof AuthError) {
+    if (err instanceof CredentialsSignin) {
+      // authorize() returned null — bad email or password
       return { error: "Invalid email or password." };
     }
+    if (err instanceof AuthError) {
+      // MissingSecret, CallbackRouteError (DB exception), UntrustedHost, etc.
+      console.error("[signInAction] unexpected AuthError:", err.constructor.name, err.message, err.cause);
+      return { error: `Auth error (${err.constructor.name}). Check server logs.` };
+    }
+    // NEXT_REDIRECT throws here on success — let it propagate
     throw err;
   }
 

@@ -8,8 +8,8 @@ CoachSync is a full-stack coach-athlete management platform built to eliminate l
 
 | Role | Email | Password |
 |------|-------|----------|
-| Coach | coach@demo.com | demo1234 |
-| Athlete | athlete@demo.com | demo1234 |
+| Coach | coach@coachsync.demo | demo1234 |
+| Athlete | marcus@coachsync.demo | demo1234 |
 
 ## Tech Stack
 

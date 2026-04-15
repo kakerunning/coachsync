@@ -8,9 +8,6 @@ const nextConfig: NextConfig = {
     '@prisma/adapter-pg',
     'pg',
   ],
-  turbopack: {
-    root: __dirname,
-  },
 };
 
 export default nextConfig;
