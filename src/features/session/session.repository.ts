@@ -107,6 +107,31 @@ export async function listSessionsByAthlete(
   return { items, total };
 }
 
+// list sessions by athlete for a coach view (includes feedback note)
+export async function listSessionsByAthleteForCoach(
+  athleteId: string,
+  skip: number,
+  take: number
+): Promise<{ items: unknown[]; total: number }> {
+  const where = { athleteId };
+
+  const [items, total] = await Promise.all([
+    db.session.findMany({
+      where,
+      orderBy: { date: "desc" },
+      skip,
+      take,
+      include: {
+        types: true,
+        feedback: { select: { fatigue: true, rpe: true, note: true } },
+      },
+    }),
+    db.session.count({ where }),
+  ]);
+
+  return { items, total };
+}
+
 // find the best lap time for a given distance (prisma findMany)
 export async function getChartData(athleteId: string, distance: string) {
   const sessions = await db.session.findMany({

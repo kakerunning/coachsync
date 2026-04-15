@@ -67,6 +67,15 @@ export type SessionListItem = {
   feedback: { fatigue: number; rpe: number } | null;
 };
 
+export type AthleteSessionListItem = {
+  id: string;
+  date: Date;
+  title: string;
+  durationMin: number | null;
+  types: { type: string }[];
+  feedback: { fatigue: number; rpe: number; note: string | null } | null;
+};
+
 export type SessionDetail = {
   id: string;
   date: Date;

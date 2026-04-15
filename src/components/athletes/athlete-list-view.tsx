@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { UserMinus } from "lucide-react";
 import { CreateInviteButton } from "@/components/invite/create-invite-button";
+import Link from "next/link";
 
 function formatDate(date: Date | string): string {
   return new Date(date).toLocaleDateString("en-US", {
@@ -84,7 +85,14 @@ export function AthleteListView() {
             <TableBody>
               {athletes.map((rel) => (
                 <TableRow key={rel.id}>
-                  <TableCell className="font-medium">{rel.athlete.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link
+                      href={`/dashboard/athletes/${rel.athleteId}/sessions`}
+                      className="hover:underline text-gray-900"
+                    >
+                      {rel.athlete.name}
+                    </Link>
+                  </TableCell>
                   <TableCell className="text-gray-500">{rel.athlete.email}</TableCell>
                   <TableCell className="text-gray-400 text-sm">
                     {formatDate(rel.createdAt)}

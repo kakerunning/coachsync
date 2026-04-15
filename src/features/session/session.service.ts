@@ -1,6 +1,7 @@
 import * as repo from "./session.repository";
+import * as athleteRepo from "@/features/athlete/athlete.repository";
 import { sessionPayloadSchema } from "./session.types";
-import type { SessionPayload, SessionListItem, SessionDetail } from "./session.types";
+import type { SessionPayload, SessionListItem, SessionDetail, AthleteSessionListItem } from "./session.types";
 
 // create a new session for an athlete (validates with Zod before writing)
 export type CreateSessionResult =
@@ -101,4 +102,29 @@ export async function getChartData(
 
 export function buildSessionPayload(payload: SessionPayload): SessionPayload {
   return payload;
+}
+
+// list an athlete's sessions for a coach (validates coach-athlete relationship)
+export type ListAthleteSessionsForCoachResult =
+  | { ok: true; sessions: AthleteSessionListItem[]; total: number }
+  | { ok: false; status: 403 | 500; error: string };
+
+export async function listAthleteSessionsForCoach(
+  coachId: string,
+  athleteId: string,
+  page = 1,
+  limit = 20
+): Promise<ListAthleteSessionsForCoachResult> {
+  const relation = await athleteRepo.findRelation(coachId, athleteId);
+  if (!relation) {
+    return { ok: false, status: 403, error: "Forbidden: athlete not on your roster" };
+  }
+
+  try {
+    const skip = (page - 1) * limit;
+    const { items, total } = await repo.listSessionsByAthleteForCoach(athleteId, skip, limit);
+    return { ok: true, sessions: items as AthleteSessionListItem[], total };
+  } catch {
+    return { ok: false, status: 500, error: "Failed to list sessions" };
+  }
 }

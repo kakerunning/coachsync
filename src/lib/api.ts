@@ -1,5 +1,5 @@
 import type { AthleteRelation } from "@/features/athlete/athlete.types";
-import type { SessionPayload, SessionListItem, SessionDetail } from "@/features/session/session.types";
+import type { SessionPayload, SessionListItem, SessionDetail, AthleteSessionListItem } from "@/features/session/session.types";
 import type { UserProfile, UpdateProfileInput } from "@/features/profile/profile.types";
 import type { CoachEvent, CreateEventInput } from "@/features/event/event.types";
 import type { CalendarItem } from "@/features/calendar/calendar.types";
@@ -100,6 +100,10 @@ export function fetchChartData(
   return apiFetch<{ date: string; minTime: number }[]>(
     `/api/sessions/chart?distance=${encodeURIComponent(distance)}`
   );
+}
+
+export function fetchAthleteSessionsForCoach(athleteId: string, page = 1): Promise<Paginated<AthleteSessionListItem>> {
+  return apiFetchPaginated<AthleteSessionListItem>(`/api/athletes/${athleteId}/sessions?page=${page}`);
 }
 
 // ── Translation ───────────────────────────────────────────────────────────────
