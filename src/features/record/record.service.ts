@@ -1,3 +1,6 @@
+// Record service — access control for personal best tracking.
+// Athletes own their records; coaches on the same roster can read and delete
+// (e.g. to correct a data entry error) but cannot create records on behalf of athletes.
 import { db } from "@/lib/db";
 import * as repo from "./record.repository";
 import type { PersonalRecord, CreateRecordInput } from "./record.types";
@@ -62,6 +65,8 @@ export async function deleteRecord(
   const record = await repo.findRecordById(recordId);
   if (!record) return { ok: false, status: 404, error: "Record not found" };
 
+  // loggedById covers the case where a coach originally created the record
+  // on behalf of an athlete and should be able to delete their own entry.
   const isOwner = record.athleteId === requesterId || record.loggedById === requesterId;
   const isCoachOfAthlete =
     requesterRole === "COACH" &&

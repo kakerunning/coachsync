@@ -1,3 +1,6 @@
+// DELETE /api/athletes/[athleteId] — remove an athlete from the coach's roster (coach-only).
+// Deletes the CoachAthleteRelation only; the athlete's account and session data are preserved.
+// Returns 204 No Content on success.
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import type { ApiResponse } from "@/features/athlete/athlete.types";

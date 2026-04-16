@@ -1,3 +1,7 @@
+// AthleteOverview — server component that renders the athlete's dashboard.
+// All data is fetched in a single Promise.all to minimise Supabase round-trips.
+// Streak is measured in consecutive weeks with at least one session (not daily),
+// matching how most training plans are structured.
 import Link from "next/link";
 import { db } from "@/lib/db";
 
@@ -70,8 +74,9 @@ function computeStreak(dates: Date[]): number {
   let streak = 0;
   const cursor = new Date();
   cursor.setHours(0, 0, 0, 0);
-  // Move to Monday of current week
+  // (day + 6) % 7 converts JS Sunday=0 to Monday=0 week indexing.
   cursor.setDate(cursor.getDate() - ((cursor.getDay() + 6) % 7));
+  // Cap at 104 weeks (2 years) to avoid an infinite loop on bad data.
   while (weeks.has(isoWeekKey(cursor)) && streak < 104) {
     streak++;
     cursor.setDate(cursor.getDate() - 7);
@@ -394,6 +399,8 @@ export async function AthleteOverview({
                     vol > 0 ? Math.max(8, Math.round((vol / maxVol) * 56)) : 3;
                   const isActive = vol > 0;
                   const isToday = i === todayIdx;
+                  // Sessions at or above 50 % of peak weekly volume get full teal;
+                  // lighter sessions get a softer shade to show relative load at a glance.
                   const color = isActive
                     ? vol >= maxVol * 0.5
                       ? "#1D9E75"

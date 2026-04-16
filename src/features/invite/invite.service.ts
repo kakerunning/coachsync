@@ -1,8 +1,13 @@
+// Business logic for coach invite links.
+// A coach generates a single-use token; an athlete opens the link to establish
+// the coach-athlete relationship. Tokens expire after TTL_HOURS.
 import * as repo from "./invite.repository";
 import * as athleteRepo from "@/features/athlete/athlete.repository";
 import type { InviteInfo } from "./invite.types";
 
-const TTL_HOURS = 24; 
+// 24 hours: long enough for async sharing (e.g. email), short enough to limit
+// the window if a link is accidentally leaked.
+const TTL_HOURS = 24;
 
 export type CreateInviteResult =
   | { ok: true; token: string; expiresAt: Date }
@@ -63,6 +68,7 @@ export async function acceptInvite(
   if (invite.usedById) {
     return { ok: false, status: 410, error: "Invite has already been used" };
   }
+  // Prevent a coach from accidentally accepting their own invite link.
   if (invite.coachId === athleteId) {
     return { ok: false, status: 400, error: "Cannot accept your own invite" };
   }
@@ -72,6 +78,9 @@ export async function acceptInvite(
     return { ok: false, status: 409, error: "You are already linked to this coach" };
   }
 
+  // Two writes: create the roster relationship, then mark the token consumed.
+  // These are not wrapped in a transaction — if markInviteUsed fails the relation
+  // still exists but the token stays reusable. Acceptable given single-use UX.
   await athleteRepo.createRelation(invite.coachId, athleteId);
   await repo.markInviteUsed(token, athleteId);
   return { ok: true };

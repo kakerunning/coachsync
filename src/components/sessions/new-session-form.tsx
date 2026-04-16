@@ -1,3 +1,6 @@
+// NewSessionForm — multi-section form for athletes to log a completed training session.
+// Persists a draft to localStorage so work is not lost on accidental navigation;
+// draft is cleared on successful submit.
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -27,6 +30,8 @@ type SetBlock = { id: string; abandoned: boolean; note: string; laps: LapRow[] }
 type WarmupRow = { id: string; name: string; detail: string };
 type DrillRow = { id: string; name: string };
 
+// Module-level counter generates stable React keys for dynamically added rows
+// without requiring a UUID library. Resets on HMR but that is acceptable in dev.
 let _uid = 0;
 function uid() { return String(++_uid); }
 
@@ -105,12 +110,14 @@ function SliderField({
   );
 }
 
+// Fatigue 1–2 = fine, 3 = moderate, 4–5 = high
 function fatigueColor(v: number) {
   if (v <= 2) return "#1D9E75";
   if (v === 3) return "#BA7517";
   return "#E24B4A";
 }
 
+// RPE 1–4 = easy, 5–6 = moderate, 7–8 = hard, 9–10 = maximal
 function rpeColor(v: number) {
   if (v <= 4) return "#1D9E75";
   if (v <= 6) return "#BA7517";
@@ -209,6 +216,8 @@ export function NewSessionForm() {
       if (form.cramp) incidents.push({ type: "CRAMP", detail: form.crampDetail || undefined });
       if (form.pain) incidents.push({ type: "PAIN", bodyPart: form.painBodyPart || undefined, severity: form.painSeverity });
       if (form.earlyFatigue) incidents.push({ type: "EARLY_FATIGUE" });
+      // At least one incident record is required by the schema; NONE signals a
+      // clean session so the service can distinguish "no issues" from "not answered".
       if (!form.cramp && !form.pain && !form.earlyFatigue) incidents.push({ type: "NONE" });
 
       const payload: SessionPayload = {

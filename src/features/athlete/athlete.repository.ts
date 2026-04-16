@@ -1,7 +1,8 @@
+// Athlete repository — raw Prisma queries for coach-athlete relationship management.
+// All roster mutations go through this layer; business rules live in athlete.service.ts.
 import { db } from "@/lib/db";
 import type { AthleteRelation, AthleteUser } from "./athlete.types";
 
-// find all athletes by coach id (ordered by newest first)
 export async function findAthletesByCoachId(coachId: string): Promise<AthleteRelation[]> {
   return db.coachAthleteRelation.findMany({
     where: { coachId },
@@ -14,7 +15,6 @@ export async function findAthletesByCoachId(coachId: string): Promise<AthleteRel
   });
 }
 
-// find a relation by coach id and athlete id
 export async function findRelation(
   coachId: string,
   athleteId: string
@@ -25,7 +25,8 @@ export async function findRelation(
   });
 }
 
-// find a user by email(includes role for validation)
+// Role is fetched alongside user data so the service can reject non-athlete accounts
+// before creating a relation, without needing a second query.
 export async function findUserByEmail(email: string): Promise<AthleteUser & { role: string } | null> {
   return db.user.findUnique({
     where: { email },
@@ -33,7 +34,6 @@ export async function findUserByEmail(email: string): Promise<AthleteUser & { ro
   });
 }
 
-// create a new relation between a coach and an athlete
 export async function createRelation(
   coachId: string,
   athleteId: string
@@ -48,7 +48,6 @@ export async function createRelation(
   });
 }
 
-// delete a relation between a coach and an athlete
 export async function deleteRelation(coachId: string, athleteId: string): Promise<void> {
   await db.coachAthleteRelation.delete({
     where: { coachId_athleteId: { coachId, athleteId } },

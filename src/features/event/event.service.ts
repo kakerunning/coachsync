@@ -1,3 +1,7 @@
+// Business logic for scheduled events (matches, camps, tests, etc.).
+// Both coaches and athletes can create and delete their own events.
+// When an athlete creates an event, coachId is set to their own userId in the API route
+// so the dual-ownership delete rule works uniformly for both roles.
 import * as repo from "./event.repository";
 import { notifyUser } from "@/lib/push";
 import type { CoachEvent, CreateEventInput } from "./event.types";
@@ -35,7 +39,7 @@ export async function createEvent(
 
   const event = await repo.createEvent(coachId, input);
 
-  // Notify athlete
+  // Notify the athlete fire-and-forget — push failure must not roll back the saved event.
   if (input.athleteId) {
     notifyUser(input.athleteId, {
       title: "New event scheduled",
@@ -57,6 +61,8 @@ export async function deleteEvent(
 ): Promise<DeleteEventResult> {
   const event = await repo.findEventById(eventId);
   if (!event) return { ok: false, status: 404, error: "Event not found" };
+  // Either the creating coach or the assigned athlete can delete the event —
+  // athletes need this so they can remove events they scheduled for themselves.
   if (event.coachId !== userId && event.athleteId !== userId) return { ok: false, status: 403, error: "Forbidden" };
 
   await repo.deleteEvent(eventId);

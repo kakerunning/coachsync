@@ -1,3 +1,7 @@
+// PATCH /api/sessions/[id]/feedback — update the athlete's free-text note on their session.
+// Athlete-only: the service returns 403 if the requester is not the session owner.
+// As a side effect, the service auto-translates the note into the coach's language via DeepL.
+// An empty string is a valid note value (clears the note).
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import * as service from "@/features/session/session.service";

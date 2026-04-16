@@ -1,3 +1,6 @@
+// Profile repository — read and update a user's own profile fields.
+// Email is intentionally excluded from UpdateProfileInput; email changes
+// are not supported and would require re-verification.
 import { db } from "@/lib/db";
 import type { UserProfile, UpdateProfileInput } from "./profile.types";
 

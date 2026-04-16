@@ -1,3 +1,6 @@
+// Next.js middleware — runs on every request matched by config.matcher.
+// Enforces two redirect rules: unauthenticated users are sent to /login;
+// authenticated users who visit /login or /signup are sent to /dashboard.
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
@@ -17,5 +20,7 @@ export default auth((req) => {
 });
 
 export const config = {
+  // api/auth is excluded so NextAuth's own callback routes aren't intercepted.
+  // Static assets and favicon are excluded to avoid unnecessary auth overhead.
   matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico).*)"],
 };

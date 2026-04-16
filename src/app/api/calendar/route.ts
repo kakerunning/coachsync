@@ -1,3 +1,7 @@
+// GET /api/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD — return merged events and sessions
+// for the authenticated user in the given date range. Both params are required;
+// open-ended ranges are not supported. Role-aware: coaches see all roster athletes'
+// items, athletes see only their own.
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import type { CalendarItem } from "@/features/calendar/calendar.types";

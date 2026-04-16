@@ -1,3 +1,6 @@
+// GET /api/invite/[token] — preview invite info before accepting.
+// Intentionally unauthenticated: the athlete may not have an account yet when
+// they open the invite link, so we must return coach info without requiring a session.
 import { NextRequest, NextResponse } from "next/server";
 import * as service from "@/features/invite/invite.service";
 import type { ApiResponse, InviteInfo } from "@/features/invite/invite.types";

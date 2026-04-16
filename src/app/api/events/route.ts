@@ -1,3 +1,8 @@
+// GET  /api/events — list events for the authenticated user (paginated).
+//   Coaches see events they created; athletes see events assigned to them.
+// POST /api/events — create a new event. Both roles can create.
+//   When an athlete creates an event, athleteId is injected from their session
+//   so they cannot create events on behalf of others.
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import type { CoachEvent, CreateEventInput } from "@/features/event/event.types";
@@ -48,7 +53,9 @@ export async function POST(
     return NextResponse.json({ data: null, error: "Invalid JSON body", meta: null }, { status: 400 });
   }
 
-  // Athletes always create events for themselves
+  // Force athleteId to the authenticated user's id for athlete-created events.
+  // This also sets coachId = athleteId in the repository, enabling the uniform
+  // dual-ownership delete rule (see event.service.ts and schema comments).
   if (user.role === "ATHLETE") {
     (body as Record<string, unknown>).athleteId = user.id;
   }

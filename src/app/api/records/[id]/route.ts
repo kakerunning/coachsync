@@ -1,3 +1,6 @@
+// DELETE /api/records/[id] — delete a personal record.
+// Role and ownership checks are delegated to the service; athletes can only
+// delete their own records, coaches cannot delete records at all.
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import * as service from "@/features/record/record.service";

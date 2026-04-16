@@ -1,9 +1,11 @@
+// Event repository — Prisma queries for coach and athlete calendar events.
+// Events carry both coachId and athleteId; see event.service.ts for the
+// self-event pattern used when athletes create their own events.
 import { db } from "@/lib/db";
 import type { CoachEvent, CreateEventInput } from "./event.types";
 
 const athleteSelect = { id: true, name: true };
 
-// find all events by coach id (ordered by date ascending)
 export async function findEventsByCoach(
   coachId: string,
   skip: number,
@@ -16,7 +18,6 @@ export async function findEventsByCoach(
   return { items, total };
 }
 
-// find all events by athlete id (ordered by date ascending)
 export async function findEventsByAthlete(
   athleteId: string,
   skip: number,
@@ -29,7 +30,6 @@ export async function findEventsByAthlete(
   return { items, total };
 }
 
-// find an event by id (includes athlete select)
 export async function findEventById(id: string): Promise<CoachEvent | null> {
   return db.event.findUnique({
     where: { id },
@@ -37,8 +37,6 @@ export async function findEventById(id: string): Promise<CoachEvent | null> {
   });
 }
 
-// create a new event (includes athlete select)
-//if athleteId is not provided, it defaults to the coachId
 export async function createEvent(
   coachId: string,
   input: CreateEventInput
@@ -52,6 +50,9 @@ export async function createEvent(
       location: input.location ?? null,
       notes: input.notes ?? null,
       coachId,
+      // When an athlete creates their own event, the service passes their id as both
+      // coachId and athleteId (self-event pattern), so this fallback to coachId also
+      // handles that case correctly.
       athleteId: input.athleteId ?? coachId,
     },
     include: { athlete: { select: athleteSelect } },

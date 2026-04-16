@@ -1,3 +1,8 @@
+// Prisma client singleton.
+// Next.js hot-reload in development re-evaluates modules on every change, which
+// would create a new PrismaClient (and a new connection pool) on each reload.
+// Storing the instance on globalThis prevents pool exhaustion during development.
+// In production the module is only ever evaluated once so the guard is a no-op.
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 

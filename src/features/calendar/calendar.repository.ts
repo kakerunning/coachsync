@@ -1,5 +1,11 @@
+// Prisma queries for the calendar feed.
+// Two data sources are merged at the service layer: scheduled events and training sessions.
 import { db } from "@/lib/db";
 
+// Answers: "what events fall in this date range for this user?"
+// Coaches filter by coachId (all events they created); athletes filter by athleteId
+// (only events assigned to them). The WHERE clause differs because of the dual-ownership
+// model on Event (see schema comments).
 export async function findEventsInRange(userId: string, role: string, from: Date, to: Date) {
   const where =
     role === "COACH"
@@ -27,7 +33,9 @@ export async function findStandaloneSessionsInRange(
   to: Date
 ) {
   if (role === "COACH") {
-    // Show sessions belonging to all athletes linked to this coach
+    // Two-step fan-out: first collect all athlete IDs on this coach's roster,
+    // then query sessions for those athletes. Prisma doesn't support a direct
+    // join through the relation table in a single findMany with a date filter.
     const relations = await db.coachAthleteRelation.findMany({
       where: { coachId: userId },
       select: { athleteId: true },

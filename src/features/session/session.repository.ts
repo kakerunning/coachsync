@@ -1,7 +1,10 @@
+// Prisma queries for training sessions.
+// No business logic here — ownership checks and validation live in session.service.ts.
 import { db } from "@/lib/db";
 import type { SessionPayload } from "./session.types";
 
-// create a new session for an athlete (prisma create)
+// Writes a complete session in one round-trip: all nested models (types, warmup,
+// sets, laps, drills, feedback, incidents) are created atomically with the parent.
 export async function createSession(athleteId: string, payload: SessionPayload) {
   return db.session.create({
     data: {
@@ -74,7 +77,9 @@ export async function getSessionById(id: string) {
   });
 }
 
-// find all sessions by athlete id (prisma findMany)
+// Answers: "what sessions did this athlete complete?"
+// Two modes: filtered by ISO week (returns all, no pagination — a week has at most 7 sessions)
+// or paginated by creation order for the full history view.
 export async function listSessionsByAthlete(
   athleteId: string,
   week?: string,
@@ -132,7 +137,10 @@ export async function listSessionsByAthleteForCoach(
   return { items, total };
 }
 
-// find the best lap time for a given distance (prisma findMany)
+// Answers: "how has this athlete's best time for a given distance trended?"
+// Scans the 10 most recent sessions (oldest-first for chart ordering) and
+// returns the minimum lap time per session for the specified distance.
+// Capped at 10 sessions to keep the performance chart readable without pagination.
 export async function getChartData(athleteId: string, distance: string) {
   const sessions = await db.session.findMany({
     where: { athleteId },
@@ -169,16 +177,27 @@ export async function getChartData(athleteId: string, distance: string) {
 // update the feedback note for a session (prisma update)
 export async function updateFeedback(
   sessionId: string,
-  note: string
+  note: string,
+  noteTranslated?: string | null,
+  noteSourceLang?: string | null,
+  noteTargetLang?: string | null
 ) {
   return db.sessionFeedback.update({
     where: { sessionId },
-    data: { note },
+    data: {
+      note,
+      noteTranslated: noteTranslated ?? null,
+      noteSourceLang: noteSourceLang ?? null,
+      noteTargetLang: noteTargetLang ?? null,
+    },
   });
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+// Converts an ISO 8601 week string (e.g. "2026-W14") to a Monday–Sunday date range.
+// Algorithm: ISO weeks start on Monday and week 1 is the week containing Jan 4
+// (equivalently, the week containing the first Thursday of the year).
 function parseISOWeek(week: string): { start: Date; end: Date } {
   const [yearStr, weekStr] = week.split("-W");
   const year = parseInt(yearStr, 10);
@@ -186,6 +205,7 @@ function parseISOWeek(week: string): { start: Date; end: Date } {
 
   // Jan 4 is always in ISO week 1
   const jan4 = new Date(year, 0, 4);
+  // getDay() returns 0 for Sunday; the `|| 7` maps it to 7 so Monday=1 … Sunday=7.
   const dayOfWeek = jan4.getDay() || 7; // Mon=1 … Sun=7
   const monday = new Date(jan4);
   monday.setDate(jan4.getDate() - dayOfWeek + 1);

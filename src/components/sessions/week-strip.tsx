@@ -1,3 +1,6 @@
+// WeekStrip — horizontal 7-day navigator shown above a session detail.
+// Clicking a day with a session navigates to it; clicking an empty day opens
+// the new-session form pre-filled with that date.
 "use client";
 
 import { useEffect, useState } from "react";
@@ -8,6 +11,8 @@ import type { SessionListItem } from "@/features/session/session.types";
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const TEAL = "#1D9E75";
 
+// ISO 8601 week number: shift to Thursday of the same week (Thu is always in the
+// correct year), then compute the week number relative to Jan 1 of that year.
 function toISOWeek(d: Date): string {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
@@ -20,6 +25,7 @@ function getWeekDays(isoWeek: string): Date[] {
   const [yearStr, weekStr] = isoWeek.split("-W");
   const year = parseInt(yearStr, 10);
   const weekNum = parseInt(weekStr, 10);
+  // Jan 4 is always in ISO week 1 by definition; use it to anchor the Monday.
   const jan4 = new Date(year, 0, 4);
   const dayOfWeek = jan4.getDay() || 7;
   const monday = new Date(jan4);

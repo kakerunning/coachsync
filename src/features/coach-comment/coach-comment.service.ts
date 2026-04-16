@@ -1,9 +1,15 @@
+// Business logic for coach comments on training sessions.
+// Reading comments is open to both the athlete (their session) and any coach on
+// their roster. Writing is coach-only and requires an active roster relationship.
+// Push notifications are sent to the athlete fire-and-forget after a comment is saved.
 import { db } from "@/lib/db";
 import * as repo from "./coach-comment.repository";
 import { notifyUser } from "@/lib/push";
 import type { CoachComment } from "./coach-comment.types";
 
-// verify requester can access this session (is the athlete or their coach with the athlete on their roster)
+// Read access is intentionally broader than session detail access: any coach who has
+// the athlete on their roster can read comments, even if they are not the session's
+// assigned coachId. This allows assistant coaches or multi-coach setups to review feedback.
 async function canAccessSession(
   sessionId: string,
   requesterId: string,
@@ -71,7 +77,8 @@ export async function createComment(
 
   const comment = await repo.createComment(sessionId, coachId, text.trim());
 
-  // Notify athlete
+  // Notify athlete fire-and-forget — a failed push must never roll back a saved comment.
+  // .catch(() => {}) silences the rejection so the promise doesn't surface as an unhandled error.
   notifyUser(session.athleteId, {
     title: "New coach feedback",
     body: `${comment.coach.name}: ${text.trim().slice(0, 100)}`,

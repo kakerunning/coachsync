@@ -1,3 +1,7 @@
+// POST /api/translate — proxy a single text string through the DeepL API.
+// Auth is required to prevent this from acting as an open translation proxy.
+// Accepts both app ISO 639-1 codes (e.g. "ja") and DeepL uppercase codes (e.g. "JA").
+// Used by the coach-comments component to translate comments on demand.
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { translateText, DEEPL_LANG_MAP } from "@/lib/deepl";

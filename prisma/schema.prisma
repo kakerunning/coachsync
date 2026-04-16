@@ -20,7 +20,7 @@ model User {
   passwordHash String                        /// Stored password (harshed, never plain text)
   name         String                        
   role         Role                          /// Either COACH or ATHLETE
-  language     String   @default("en")       
+  language     String   @default("en")       /// Preferred language (ISO 639-1 code). For coaches, this is the DeepL target language when auto-translating athlete feedback notes.
   imageUrl     String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -76,7 +76,7 @@ model InviteLink {
   id        String    @id @default(cuid())
   token     String    @unique @default(cuid())
   coachId   String
-  expiresAt DateTime
+  expiresAt DateTime                        /// TTL set by the service layer (default 24 hours from creation). Expired tokens are rejected at accept time.
   usedById  String?
   createdAt DateTime  @default(now())
 
@@ -170,6 +170,8 @@ enum TestType {
   FIELD_TEST
 }
 
+// Both coachId and athleteId are non-nullable. When an athlete creates their own event,
+// both are set to the athlete's userId — this allows a single ownership rule across roles.
 model Event {
   id        String    @id @default(cuid())
   title     String
@@ -213,7 +215,7 @@ model Session {
   title       String
   durationMin Int?
   athleteId   String
-  coachId     String?                       /// this field is optional (nullable)
+  coachId     String?                       /// Nullable — athletes can log sessions independently before a coach relationship is established.
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -260,7 +262,7 @@ model Lap {
   id          String  @id @default(cuid())
   order       Int
   distance    String
-  timeSeconds Float?
+  timeSeconds Float?                      /// Elapsed time for this lap in seconds (e.g. 13.2 for a 100m sprint). Null if the athlete didn't record a time.
   note        String?                     /// this field is optional (nullable)
   setId       String
 
@@ -277,11 +279,14 @@ model Drill {
 }
 
 model SessionFeedback {
-  id        String  @id @default(cuid())
-  fatigue   Int
-  rpe       Int
-  note      String?                       /// this field is optional (nullable)
-  sessionId String  @unique
+  id             String  @id @default(cuid())
+  fatigue        Int                             /// Athlete self-rating: 1 (minimal fatigue) – 5 (complete exhaustion). Inclusive bounds.
+  rpe            Int                             /// Rate of Perceived Exertion (Borg CR10 scale): 1 (very light) – 10 (maximal effort). Inclusive bounds.
+  note           String?                       /// this field is optional (nullable)
+  noteTranslated String?                       /// translated version of note (coach's language)
+  noteSourceLang String?                       /// detected source language from DeepL (e.g. "JA")
+  noteTargetLang String?                       /// coach's language code used as translation target (e.g. "EN")
+  sessionId      String  @unique
 
   session   Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   incidents Incident[]
@@ -291,7 +296,7 @@ model Incident {
   id         String       @id @default(cuid())
   type       IncidentType
   bodyPart   String?                       /// this field is optional (nullable)
-  severity   Int?                          /// this field is optional (nullable)
+  severity   Int?                          /// Subjective severity of the incident: 1 (minor discomfort) – 5 (session-ending). Null if not recorded.
   detail     String?                       /// this field is optional (nullable)                
   feedbackId String
 

@@ -1,3 +1,6 @@
+// POST /api/invite — generate a one-time invite link for the authenticated coach.
+// Only coaches may create invites; TTL and token generation are handled by the service.
+// The returned token is embedded in the invite URL shared with the athlete out-of-band.
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import * as service from "@/features/invite/invite.service";

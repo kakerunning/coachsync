@@ -1,3 +1,6 @@
+// GET /api/sessions/[id] — fetch a session's full detail including sets, laps, feedback,
+// and coach comments. Accessible by the owning athlete or their assigned coach.
+// Permission enforcement is delegated to session.service.getSession.
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import * as service from "@/features/session/session.service";

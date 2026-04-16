@@ -1,3 +1,6 @@
+// DELETE /api/sessions/[id]/comments/[commentId] — remove a coach comment.
+// Only the coach who authored the comment can delete it; the service enforces this.
+// The parent sessionId in the route is not used here — commentId is globally unique.
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import * as service from "@/features/coach-comment/coach-comment.service";

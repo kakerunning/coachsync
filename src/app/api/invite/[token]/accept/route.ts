@@ -1,3 +1,6 @@
+// POST /api/invite/[token]/accept — athlete accepts a coach's invite link.
+// Athlete-only: coaches cannot accept their own invites.
+// The service validates token expiry and prevents duplicate relationships.
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import * as service from "@/features/invite/invite.service";

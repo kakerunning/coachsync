@@ -1,3 +1,6 @@
+// Zod schemas for validating session POST bodies, and TypeScript types for
+// API responses. The schema layer lives here so both API routes and the service
+// can import validation without creating a circular dependency.
 import { z } from "zod";
 
 // ── Zod validation schema ────────────────────────────────────────────────────
@@ -35,9 +38,9 @@ const incidentSchema = z.object({
 });
 
 const feedbackSchema = z.object({
-  fatigue: z.number().int().min(1).max(5),
-  rpe: z.number().int().min(1).max(10),
-  note: z.string().optional(),
+  fatigue: z.number().int().min(1).max(5),   // 1 = minimal fatigue, 5 = complete exhaustion
+  rpe: z.number().int().min(1).max(10),      // Borg CR10: 1 = very light, 10 = maximal effort
+  note: z.string().optional(),               // Free-text note to coach; optional because RPE/fatigue alone is useful data
   incidents: z.array(incidentSchema),
 });
 
@@ -57,6 +60,8 @@ export const sessionPayloadSchema = z.object({
 export type SessionPayload = z.infer<typeof sessionPayloadSchema>;
 
 // ── API response types ───────────────────────────────────────────────────────
+// These are the shapes returned by API routes, not Prisma models directly.
+// They are intentionally narrower than the DB model to avoid leaking internal fields.
 
 export type SessionListItem = {
   id: string;
@@ -67,6 +72,8 @@ export type SessionListItem = {
   feedback: { fatigue: number; rpe: number } | null;
 };
 
+// Extended list item used in the coach's view of an athlete's session log.
+// Includes the athlete's note so coaches can preview it without opening each session.
 export type AthleteSessionListItem = {
   id: string;
   date: Date;
@@ -100,6 +107,9 @@ export type SessionDetail = {
     fatigue: number;
     rpe: number;
     note: string | null;
+    noteTranslated: string | null;
+    noteSourceLang: string | null;
+    noteTargetLang: string | null;
     incidents: { id: string; type: string; bodyPart: string | null; severity: number | null; detail: string | null }[];
   } | null;
 };

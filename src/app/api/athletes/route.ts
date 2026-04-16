@@ -1,3 +1,7 @@
+// GET  /api/athletes — list the coach's current roster (coach-only).
+// POST /api/athletes — add an athlete to the coach's roster by email address.
+//   Looks up the user by email and creates a CoachAthleteRelation; the athlete
+//   must already have a CoachSync account.
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import type { ApiResponse, AthleteRelation } from "@/features/athlete/athlete.types";

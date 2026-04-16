@@ -1,3 +1,6 @@
+// Profile service — thin validation layer over profile.repository.
+// Rejects blank names here rather than at the DB level so the error message
+// is user-friendly rather than a constraint violation.
 import * as repo from "./profile.repository";
 import type { UserProfile, UpdateProfileInput } from "./profile.types";
 

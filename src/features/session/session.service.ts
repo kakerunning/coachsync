@@ -1,7 +1,13 @@
+// Business logic for training sessions: validation, ownership checks,
+// pagination, and auto-translation of athlete feedback notes for coaches.
+// All functions return discriminated unions { ok: true, ... } | { ok: false, status, error }
+// so API routes can map errors to HTTP status codes without try/catch.
 import * as repo from "./session.repository";
 import * as athleteRepo from "@/features/athlete/athlete.repository";
 import { sessionPayloadSchema } from "./session.types";
 import type { SessionPayload, SessionListItem, SessionDetail, AthleteSessionListItem } from "./session.types";
+import { db } from "@/lib/db";
+import { translateText, DEEPL_LANG_MAP } from "@/lib/deepl";
 
 // create a new session for an athlete (validates with Zod before writing)
 export type CreateSessionResult =
@@ -38,6 +44,8 @@ export async function getSession(
   const session = await repo.getSessionById(id);
   if (!session) return { ok: false, status: 404, error: "Session not found" };
 
+  // Two valid access paths: the athlete who owns the session, or the coach
+  // explicitly assigned to it (coachId must match — roster membership alone isn't enough).
   const isOwner = session.athleteId === requesterId;
   const isCoach = requesterRole === "COACH" && session.coachId === requesterId;
   if (!isOwner && !isCoach) {
@@ -84,8 +92,30 @@ export async function updateFeedbackNote(
   if (session.athleteId !== requesterId) return { ok: false, status: 403, error: "Forbidden" };
   if (!session.feedback) return { ok: false, status: 404, error: "Feedback not found" };
 
+  // Auto-translate for the coach — never block submission if translation fails
+  let noteTranslated: string | null = null;
+  let noteSourceLang: string | null = null;
+  let noteTargetLang: string | null = null;
+
+  if (note.trim() && session.coachId) {
+    try {
+      const coach = await db.user.findUnique({
+        where: { id: session.coachId },
+        select: { language: true },
+      });
+      const coachLang = coach?.language ?? "en";
+      const deeplTarget = DEEPL_LANG_MAP[coachLang.toLowerCase()] ?? coachLang.toUpperCase();
+      const result = await translateText(note, deeplTarget);
+      noteTranslated = result.translatedText;
+      noteSourceLang = result.detectedSourceLang;
+      noteTargetLang = deeplTarget;
+    } catch {
+      // Translation failed — store original only, do not block
+    }
+  }
+
   try {
-    await repo.updateFeedback(sessionId, note);
+    await repo.updateFeedback(sessionId, note, noteTranslated, noteSourceLang, noteTargetLang);
     return { ok: true };
   } catch {
     return { ok: false, status: 500, error: "Failed to update feedback" };
@@ -115,6 +145,8 @@ export async function listAthleteSessionsForCoach(
   page = 1,
   limit = 20
 ): Promise<ListAthleteSessionsForCoachResult> {
+  // Guard: the coach must have an active roster relationship with the athlete.
+  // This prevents a coach from accessing sessions of athletes they don't manage.
   const relation = await athleteRepo.findRelation(coachId, athleteId);
   if (!relation) {
     return { ok: false, status: 403, error: "Forbidden: athlete not on your roster" };

@@ -1,3 +1,6 @@
+// RecordListView — personal best tracker grouped by discipline category.
+// Each discipline shows the best mark prominently, with older marks collapsible
+// underneath. Coaches must select an athlete before records are fetched.
 "use client";
 
 import { useMemo, useState } from "react";
@@ -144,6 +147,8 @@ export function RecordListView({ isCoach, currentUserId }: { isCoach: boolean; c
     enabled: isCoach,
   });
 
+  // Do not fetch until a coach has selected an athlete — an empty athleteId would
+  // return the coach's own (non-existent) records rather than erroring gracefully.
   const { data: records = [], isLoading, error } = useQuery({
     queryKey: ["records", athleteId],
     queryFn: () => fetchRecords(athleteId || undefined),

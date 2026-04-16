@@ -1,3 +1,6 @@
+// GET /api/coach — return the coach assigned to the authenticated athlete (athlete-only).
+// Used by the athlete dashboard to display coach name and contact info.
+// Returns 404 if the athlete has no coach relationship yet.
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import type { CoachInfo } from "@/features/coach/coach.types";

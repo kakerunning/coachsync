@@ -1,3 +1,6 @@
+// Server actions for sign-up and sign-in.
+// Called from login/signup pages via useActionState; never invoked client-side directly.
+// signUpAction creates the user record then immediately signs them in so they land on /dashboard.
 "use server";
 
 import bcrypt from "bcryptjs";
@@ -34,6 +37,7 @@ export async function signUpAction(
     return { error: "Email already in use." };
   }
   // hash the password (never store plain text passward!)
+  // Cost factor 12: ~250 ms on modern hardware — slow enough to deter brute force, fast enough for sign-up UX.
   const passwordHash = await bcrypt.hash(password, 12);
 
   // creat the new user in the database 
@@ -41,6 +45,8 @@ export async function signUpAction(
     data: { name, email, passwordHash, role },
   });
 
+  // Sign the new user in immediately — avoids a redundant login step after registration.
+  // signIn throws NEXT_REDIRECT on success, which Next.js catches and handles as a navigation.
   await signIn("credentials", { email, password, redirectTo: "/dashboard" });
 
   return { success: true };

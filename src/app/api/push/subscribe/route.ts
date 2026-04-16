@@ -1,3 +1,8 @@
+// POST /api/push/subscribe — register or update a Web Push subscription for the current user.
+// DELETE /api/push/subscribe — remove the subscription for the given endpoint.
+// Keyed on endpoint (unique per browser/device), not per user, so the same
+// device re-subscribing after a permission reset overwrites the stale record
+// rather than creating a duplicate.
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
@@ -19,6 +24,8 @@ export async function POST(
     return NextResponse.json({ data: null, error: "Invalid JSON body", meta: null }, { status: 400 });
   }
 
+  // p256dh and auth are the ECDH public key and symmetric auth secret
+  // used to encrypt push payloads — both are required by the Web Push spec.
   const { endpoint, p256dh, auth: authKey } =
     (body ?? {}) as Record<string, unknown>;
 

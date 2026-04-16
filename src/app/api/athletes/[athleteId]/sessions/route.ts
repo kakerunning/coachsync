@@ -1,3 +1,6 @@
+// GET /api/athletes/[athleteId]/sessions — paginated session log for a specific athlete (coach-only).
+// The service verifies the coach has an active roster relationship with the athlete before
+// returning data; coaches cannot browse sessions of athletes they don't manage.
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import * as service from "@/features/session/session.service";

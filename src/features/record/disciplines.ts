@@ -1,3 +1,6 @@
+// Master list of track & field disciplines used for personal record categorisation.
+// unit "s" = seconds (timed events), unit "m" = metres (field events).
+// wind = true means a wind reading must be recorded per World Athletics rules.
 export type DisciplineCategory =
   | "Sprints"
   | "Middle Distance"

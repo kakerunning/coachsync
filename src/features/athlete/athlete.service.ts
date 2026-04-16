@@ -1,3 +1,6 @@
+// Athlete service — roster management for coaches.
+// Enforces that only real ATHLETE-role accounts can be linked, and that a coach
+// cannot add themselves or an athlete they already manage.
 import * as repo from "./athlete.repository";
 import type { AthleteRelation } from "./athlete.types";
 
@@ -22,6 +25,8 @@ export async function addAthleteByEmail(
     return { ok: false, status: 400, error: "User is not an athlete" };
   }
 
+  // Prevent a coach account from linking to themselves — the schema allows it
+  // structurally, so this guard must live in the service.
   if (user.id === coachId) {
     return { ok: false, status: 400, error: "Cannot add yourself as an athlete" };
   }

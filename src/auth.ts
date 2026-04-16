@@ -1,3 +1,7 @@
+// NextAuth v5 configuration with a custom credentials provider (email + bcrypt).
+// Uses JWT sessions — no session table is created in the database.
+// id and role are not standard OIDC fields, so they must be explicitly copied
+// through the jwt callback (sign-in) and the session callback (every request).
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
@@ -14,6 +18,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
+        // Normalise email so "User@Test.com" and "user@test.com" resolve to the same account.
         const email = (credentials.email as string).toLowerCase().trim();
 
         let user;
@@ -50,6 +55,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     jwt({ token, user }) {
+      // user is only present on the initial sign-in call; on every subsequent
+      // request only token is available. Copy custom fields into the token here
+      // so they survive across requests.
       if (user) {
         token.id = user.id;
         token.role = (user as { role: string }).role;
@@ -57,6 +65,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token;
     },
     session({ session, token }) {
+      // Expose id and role on session.user so API routes and server components
+      // can access them via auth() without an extra DB lookup.
       if (session.user) {
         session.user.id = token.id as string;
         (session.user as { role?: string }).role = token.role as string;

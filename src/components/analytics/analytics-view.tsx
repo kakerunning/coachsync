@@ -1,3 +1,7 @@
+// AnalyticsView — charts dashboard powered by the Python viz service.
+// When the viz service is unavailable (VIZ_SERVICE_URL not set or service down),
+// the component falls back to hardcoded sample data so the UI still renders
+// meaningfully instead of showing an empty/error state.
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -83,6 +87,7 @@ function getMockFigure(
         layout: {
           title: `Performance Trend (${opts.distance}) — Sample Data`,
           xaxis: { title: "Date", tickfont: { size: 11 } },
+          // reversed: lower time is better, so the chart reads as "improvement going up"
           yaxis: { title: "Time (s)", autorange: "reversed", tickfont: { size: 11 } },
           plot_bgcolor: "#fff",
           paper_bgcolor: "#fff",
@@ -123,7 +128,8 @@ function getMockFigure(
     }
 
     case "volume-heatmap": {
-      // Simplified: weekly volume bars grouped by month for the selected year
+      // Named "heatmap" for discoverability, but rendered as a bar chart grouped by month
+      // because the Python service returns monthly aggregates, not a 2D matrix.
       const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
       const values = [18200, 21400, 24600, 22100, 26800, 28400, 25600, 27900, 23400, 20100, 17800, 15200];
       return {

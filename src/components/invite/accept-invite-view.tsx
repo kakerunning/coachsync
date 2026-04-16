@@ -1,3 +1,7 @@
+// AcceptInviteView — landing page for a coach's invite link.
+// Fetches coach info from the public (unauthenticated) invite endpoint so the
+// athlete can see who is inviting them before deciding to accept.
+// If the logged-in user is a coach, the Accept button is disabled with a warning.
 "use client";
 
 import { useState, useEffect } from "react";
@@ -45,6 +49,7 @@ export function AcceptInviteView({ token, userRole }: Props) {
         setAcceptError(json.error ?? "Failed to accept invite");
       } else {
         setAccepted(true);
+        // Brief delay so the athlete can read the success message before redirecting.
         setTimeout(() => router.push("/dashboard"), 2000);
       }
     } catch {

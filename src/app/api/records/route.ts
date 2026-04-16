@@ -1,3 +1,7 @@
+// GET  /api/records — list personal records for a given athlete.
+//   Defaults to the authenticated user's own records; coaches may pass
+//   ?athleteId= to view records for one of their roster athletes.
+// POST /api/records — create a personal record. Athletes only; service enforces this.
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import type { PersonalRecord, CreateRecordInput } from "@/features/record/record.types";

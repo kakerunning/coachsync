@@ -1,20 +1,20 @@
+// Personal record repository — Prisma queries for athlete PB tracking.
 import { db } from "@/lib/db";
 import type { PersonalRecord, CreateRecordInput } from "./record.types";
 
-// find all records by athlete id (ordered by discipline ascending and performance ascending)
 export async function findRecordsByAthlete(athleteId: string): Promise<PersonalRecord[]> {
+  // Order by discipline then performance so the UI gets a grouped PB list
+  // without needing a client-side sort step.
   return db.personalRecord.findMany({
     where: { athleteId },
     orderBy: [{ discipline: "asc" }, { performance: "asc" }],
   });
 }
 
-// find a record by id (includes athlete select)
 export async function findRecordById(id: string): Promise<PersonalRecord | null> {
   return db.personalRecord.findUnique({ where: { id } });
 }
 
-// create a new record (includes athlete select)
 export async function createRecord(
   loggedById: string,
   input: CreateRecordInput
@@ -29,6 +29,8 @@ export async function createRecord(
       date: new Date(input.date),
       competition: input.competition ?? null,
       location: input.location ?? null,
+      // OUTDOOR is the default because most track PBs are set outdoors;
+      // athletes must explicitly opt in to record indoor marks.
       surface: input.surface ?? "OUTDOOR",
       loggedById,
     },

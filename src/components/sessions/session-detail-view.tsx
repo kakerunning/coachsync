@@ -1,3 +1,6 @@
+// SessionDetailView — read-only session display used by both athletes and coaches.
+// Coaches see a translated version of the athlete's note; athletes see an editable
+// textarea so they can add/update their note to the coach.
 "use client";
 
 import { useState, useEffect } from "react";
@@ -58,6 +61,8 @@ function PerfChart({ distance, athleteId }: { distance: string; athleteId: strin
     enabled: !!distance && !!athleteId,
   });
 
+  // Require at least 3 data points before rendering the chart — a single-session
+  // trend has no meaningful pattern to show the athlete.
   if (!data || data.length < 3) return null;
 
   const max = Math.max(...data.map((d) => d.minTime));
@@ -85,6 +90,72 @@ function PerfChart({ distance, athleteId }: { distance: string; athleteId: strin
         ))}
       </div>
     </SectionCard>
+  );
+}
+
+// ── Athlete note display for coaches ──────────────────────────────────────────
+function AthleteNoteForCoach({
+  note,
+  noteTranslated,
+  noteSourceLang,
+  noteTargetLang,
+}: {
+  note: string | null;
+  noteTranslated: string | null;
+  noteSourceLang: string | null;
+  noteTargetLang: string | null;
+}) {
+  const [showOriginal, setShowOriginal] = useState(false);
+
+  if (!note) {
+    return <p className="text-sm text-gray-400">No notes from athlete.</p>;
+  }
+
+  const hasTranslation = !!noteTranslated && noteTranslated !== note;
+
+  return (
+    <div className="space-y-2">
+      {hasTranslation ? (
+        <>
+          {/* Language label e.g. "JA → EN" */}
+          {noteSourceLang && noteTargetLang && (
+            <span
+              style={{
+                display: "inline-block",
+                fontSize: 11,
+                fontWeight: 600,
+                color: TEAL,
+                backgroundColor: "#E8F7F2",
+                borderRadius: 10,
+                padding: "2px 8px",
+                letterSpacing: "0.04em",
+              }}
+            >
+              {noteSourceLang} → {noteTargetLang}
+            </span>
+          )}
+          {/* Translated text — primary */}
+          <p className="text-sm text-gray-900 leading-relaxed">{noteTranslated}</p>
+          {/* Toggle original */}
+          <button
+            onClick={() => setShowOriginal((v) => !v)}
+            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            {showOriginal ? "Hide original" : "Show original"}
+          </button>
+          {showOriginal && (
+            <p className="text-xs text-gray-500 italic border-l-2 border-gray-200 pl-3 leading-relaxed">
+              {note}
+            </p>
+          )}
+        </>
+      ) : (
+        <>
+          <p className="text-sm text-gray-900 leading-relaxed">{note}</p>
+          <p className="text-xs text-gray-400">[Translation unavailable]</p>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -129,7 +200,8 @@ export function SessionDetailView({
     return <p className="text-sm text-red-600 text-center py-12">Session not found.</p>;
   }
 
-  // Most common lap distance for chart
+  // Drive the performance chart with the most-repeated lap distance in this session
+  // (e.g. in "3×200m + 1×400m" the chart shows 200m trend, not 400m).
   const lapDistances = session.sets.flatMap((s) => s.laps.map((l) => l.distance));
   const distanceCount = new Map<string, number>();
   lapDistances.forEach((d) => distanceCount.set(d, (distanceCount.get(d) ?? 0) + 1));
@@ -258,13 +330,15 @@ export function SessionDetailView({
             <div className="flex gap-6 text-sm">
               <div>
                 <span className="text-gray-400 text-xs">Fatigue</span>
-                <p className="font-semibold" style={{ color: session.feedback.fatigue >= 4 ? RED : session.feedback.fatigue === 3 ? DOT_AMBER : TEAL }}>
+                {/* Fatigue 4–5 = high (red); 3 = moderate (amber); 1–2 = fine (teal) */}
+            <p className="font-semibold" style={{ color: session.feedback.fatigue >= 4 ? RED : session.feedback.fatigue === 3 ? DOT_AMBER : TEAL }}>
                   {session.feedback.fatigue} / 5
                 </p>
               </div>
               <div>
                 <span className="text-gray-400 text-xs">RPE</span>
-                <p className="font-semibold" style={{ color: session.feedback.rpe >= 7 ? RED : session.feedback.rpe >= 5 ? DOT_AMBER : TEAL }}>
+                {/* RPE 7–10 = hard (red); 5–6 = moderate (amber); 1–4 = easy (teal) */}
+            <p className="font-semibold" style={{ color: session.feedback.rpe >= 7 ? RED : session.feedback.rpe >= 5 ? DOT_AMBER : TEAL }}>
                   {session.feedback.rpe} / 10
                 </p>
               </div>
@@ -288,23 +362,34 @@ export function SessionDetailView({
 
       {/* Notes / feedback to coach */}
       <SectionCard dot={DOT_GRAY} title="Notes to coach">
-        <Textarea
-          value={feedbackNote}
-          onChange={(e) => setFeedbackNote(e.target.value)}
-          placeholder="Add notes for your coach..."
-          rows={3}
-        />
-        <div className="flex items-center gap-2 mt-2">
-          <Button
-            size="sm"
-            onClick={() => noteMutation.mutate(feedbackNote)}
-            disabled={noteMutation.isPending}
-            style={{ backgroundColor: TEAL, color: "white" }}
-          >
-            {noteMutation.isPending ? "Saving…" : "Save note"}
-          </Button>
-          {noteSaved && <span className="text-xs text-green-600">Saved</span>}
-        </div>
+        {isCoach ? (
+          <AthleteNoteForCoach
+            note={session.feedback?.note ?? null}
+            noteTranslated={session.feedback?.noteTranslated ?? null}
+            noteSourceLang={session.feedback?.noteSourceLang ?? null}
+            noteTargetLang={session.feedback?.noteTargetLang ?? null}
+          />
+        ) : (
+          <>
+            <Textarea
+              value={feedbackNote}
+              onChange={(e) => setFeedbackNote(e.target.value)}
+              placeholder="Add notes for your coach..."
+              rows={3}
+            />
+            <div className="flex items-center gap-2 mt-2">
+              <Button
+                size="sm"
+                onClick={() => noteMutation.mutate(feedbackNote)}
+                disabled={noteMutation.isPending}
+                style={{ backgroundColor: TEAL, color: "white" }}
+              >
+                {noteMutation.isPending ? "Saving…" : "Save note"}
+              </Button>
+              {noteSaved && <span className="text-xs text-green-600">Saved</span>}
+            </div>
+          </>
+        )}
       </SectionCard>
     </div>
   );

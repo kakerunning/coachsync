@@ -1,3 +1,7 @@
+// CoachComments — displays coach-to-athlete feedback on a session.
+// Athletes can read and translate comments; only coaches can post or delete.
+// Translations are cached in component state so toggling hide/show does not
+// trigger a second API call.
 "use client";
 
 import { useState } from "react";
@@ -135,7 +139,8 @@ export function CoachComments({
     queryFn: () => fetchComments(sessionId),
   });
 
-  // User language for translation target
+  // Fetch the current user's language preference to use as the DeepL target
+  // when translating coach comments. Falls back to "en" if the profile is unavailable.
   const { data: profile } = useQuery({
     queryKey: ["profile"],
     queryFn: fetchProfile,

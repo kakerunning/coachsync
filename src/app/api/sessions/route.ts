@@ -1,3 +1,7 @@
+// GET  /api/sessions — list the authenticated athlete's sessions.
+//   ?week=YYYY-Www  returns all sessions in that ISO week (no pagination, max ~7 results).
+//   ?page=N         returns a paginated page of the full history (default page 1, limit 20).
+// POST /api/sessions — create a new session for the authenticated athlete.
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import * as service from "@/features/session/session.service";
@@ -16,6 +20,7 @@ export async function GET(
   }
 
   const week = req.nextUrl.searchParams.get("week") ?? undefined;
+  // Clamp page to ≥1 and limit to ≤100 to guard against malformed query strings.
   const page = Math.max(1, parseInt(req.nextUrl.searchParams.get("page") ?? "1", 10) || 1);
   const limit = Math.min(100, parseInt(req.nextUrl.searchParams.get("limit") ?? "20", 10) || 20);
 
@@ -32,6 +37,7 @@ export async function GET(
   return NextResponse.json({
     data: result.sessions,
     error: null,
+    // Week-filtered responses omit pagination meta — the client treats them as a plain array.
     meta: week ? null : { page, limit, total: result.total, totalPages },
   });
 }

@@ -1,3 +1,7 @@
+// GET /api/sessions/chart?distance=100m — return the athlete's best lap time per session
+// for the requested distance, used to render the performance trend chart on session detail.
+// Returns the athlete's own data only (userId is used as athleteId).
+// Dates are serialised to ISO strings because the service returns Date objects.
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import * as service from "@/features/session/session.service";

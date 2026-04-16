@@ -1,3 +1,7 @@
+// CalendarView — month/week/day calendar showing merged training sessions and events.
+// Fetches items for the visible range only (React Query keyed by from/to) to avoid
+// pulling the full history. Item colours are assigned by the calendar service and
+// match the legend shown at the bottom of this component.
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -102,7 +106,8 @@ function MonthView({
     return map;
   }, [items]);
 
-  // Build 6 weeks × 7 days grid
+  // Fixed 6 × 7 = 42-cell grid so every month view has the same height.
+  // Cells outside the current month are filled with trailing/leading days from adjacent months.
   const cells: { date: string; day: number; current: boolean }[] = [];
 
   for (let i = firstDay - 1; i >= 0; i--) {
@@ -152,6 +157,7 @@ function MonthView({
                 {cell.day}
               </span>
               <div className="space-y-0.5">
+                {/* Cap at 3 pills per cell to avoid overflow in narrow month columns */}
                 {cellItems.slice(0, 3).map((item) => (
                   <ItemPill key={item.id} item={item} onClick={onItemClick} />
                 ))}

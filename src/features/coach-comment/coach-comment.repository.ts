@@ -1,9 +1,12 @@
+// Coach-comment repository — Prisma queries for coach-to-athlete session feedback.
+// Comments are always returned with coach name so the UI can attribute them without
+// a separate user lookup.
 import { db } from "@/lib/db";
 import type { CoachComment } from "./coach-comment.types";
 
+// Shared select keeps coach projection consistent across all queries in this file.
 const coachSelect = { id: true, name: true };
 
-// find all comments by session id (ordered by createdAt ascending)
 export async function findCommentsBySession(sessionId: string): Promise<CoachComment[]> {
   return db.coachComment.findMany({
     where: { sessionId },
@@ -12,7 +15,6 @@ export async function findCommentsBySession(sessionId: string): Promise<CoachCom
   });
 }
 
-// find a comment by id (includes coach select)
 export async function findCommentById(id: string): Promise<CoachComment | null> {
   return db.coachComment.findUnique({
     where: { id },
@@ -20,7 +22,6 @@ export async function findCommentById(id: string): Promise<CoachComment | null> 
   });
 }
 
-// create a new comment (includes coach select)
 export async function createComment(
   sessionId: string,
   coachId: string,

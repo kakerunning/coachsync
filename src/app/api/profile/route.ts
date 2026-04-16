@@ -1,3 +1,7 @@
+// GET /api/profile — return the authenticated user's own profile.
+// PATCH /api/profile — update name, language, or profile image URL.
+// Changing language affects the DeepL target used for future auto-translations
+// of athlete feedback; existing translated notes are not retroactively updated.
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import type { UserProfile, UpdateProfileInput } from "@/features/profile/profile.types";

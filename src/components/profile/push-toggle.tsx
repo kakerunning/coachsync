@@ -1,3 +1,6 @@
+// PushToggle — controls Web Push subscription for the current browser/device.
+// Renders nothing on browsers that don't support the Push API (e.g. Safari < 16,
+// Firefox with push disabled) rather than showing a broken or misleading UI.
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,6 +9,8 @@ import { Bell, BellOff } from "lucide-react";
 
 type PushState = "unsupported" | "loading" | "denied" | "enabled" | "disabled";
 
+// VAPID public keys are URL-safe base64 (RFC 4648 §5); the Push API expects a
+// standard base64 Uint8Array, so we must re-pad and swap - / _ → + /.
 function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -79,6 +84,7 @@ export function PushToggle() {
 
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.subscribe({
+        // userVisibleOnly: true is required by the Push API spec; Chrome rejects false.
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidKey),
       });

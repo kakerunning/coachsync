@@ -1,3 +1,6 @@
+// CreateEventDialog — modal form for creating a calendar event.
+// Coaches must select a target athlete; athletes submit without an athleteId
+// because the API route injects their own id server-side (self-event pattern).
 "use client";
 
 import { useState } from "react";
@@ -40,6 +43,8 @@ export function CreateEventDialog({ role }: { role: string }) {
 
   const isCoach = role === "COACH";
 
+  // Defer the athlete list fetch until the dialog is opened to avoid an unnecessary
+  // request on pages where the dialog button is present but rarely used.
   const { data: athletes = [] } = useQuery({
     queryKey: ["athletes"],
     queryFn: fetchAthletes,

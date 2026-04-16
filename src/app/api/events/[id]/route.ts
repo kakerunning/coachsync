@@ -1,3 +1,6 @@
+// DELETE /api/events/[id] — delete an event.
+// Either the creating coach or the assigned athlete may delete it.
+// The service enforces the dual-ownership rule; this route just passes userId through.
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import * as service from "@/features/event/event.service";
